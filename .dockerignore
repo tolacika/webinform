@@ -1,0 +1,12 @@
+node_modules
+build
+dist
+vendor
+.env
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+*.log
+*.pid
+*.lock
