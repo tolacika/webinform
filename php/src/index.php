@@ -109,9 +109,6 @@ class NewsletterAPI
                         case 'recent':
                             $this->getRecentSubscribers();
                             break;
-                        case 'stats':
-                            $this->getStats();
-                            break;
                         default:
                             $this->sendJsonResponse(['error' => 'Invalid endpoint'], 404);
                     }
@@ -225,27 +222,6 @@ class NewsletterAPI
         }
 
         $this->sendJsonResponse(['recent_subscribers' => $subscribers]);
-    }
-
-    private function getStats(): void
-    {
-        // Get total count
-        $countResult = $this->db->query("SELECT COUNT(*) as count FROM subscribers");
-        $count = $countResult->fetch_assoc()['count'];
-
-        // Get latest subscriber
-        $latestResult = $this->db->query("
-            SELECT name, email, created_at 
-            FROM subscribers 
-            ORDER BY created_at DESC 
-            LIMIT 1
-        ");
-        $latest = $latestResult->fetch_assoc();
-
-        $this->sendJsonResponse([
-            'total_subscribers' => (int)$count,
-            'latest_subscriber' => $latest ?: null
-        ]);
     }
 
     private function validateSubscriber(string $name, string $email): array
