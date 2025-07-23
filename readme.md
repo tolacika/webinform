@@ -32,6 +32,29 @@ azonnal
   - Egységteszt egy vagy több komponensre (pl. Jest, React Testing Library)
   - Responsív dizájn
  
+
+# Flutter tesztfeladat
+
+Készíts egy Flutter mobilalkalmazást (Android/iOS), amely hírlevél-feliratkozást kezel a következő elvárások szerint:
+- Feliratkozási űrlap:
+  - Név (5–40 karakter)
+  - Email (valós email formátum)
+  - Validáció minden mezőnél, hibajelzés widgetekkel
+  - Beküldés után visszajelzés (siker/hiba)
+- Feliratkozók számlálója:
+  - Jelenítse meg a feliratkozók számát
+  - Mutassa a legutóbbi feliratkozó nevét és emailjét
+- Adatkezelés:
+  - Mockolt adatkezelés (pl. memória-alapú lista vagy provider)
+  - A számláló és a legutóbbi feliratkozó adatai 5 másodpercenként automatikusan frissüljenek, illetve
+sikeres feliratkozás után azonnal
+- Technológiai elvárások:
+  - Flutter (Dart)
+  - Állapotkezelés (pl. Provider, Riverpod vagy setState)
+  - Widget-alapú felépítés
+  - Platformfüggetlen dizájn (Material vagy Cupertino)
+  - Kód jól strukturált, átlátható legyen
+
 # Solution
 ## Prerequisites
 

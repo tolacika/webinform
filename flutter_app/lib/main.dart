@@ -1,122 +1,203 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+const String apiBaseUrl = 'http://192.168.1.76:3000/api';
 
 void main() {
   runApp(const MyApp());
 }
 
+class Subscriber {
+  final String name;
+  final String email;
+  Subscriber({required this.name, required this.email});
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Newsletter Subscription',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const NewsletterPage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
+class NewsletterPage extends StatefulWidget {
+  const NewsletterPage({super.key});
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<NewsletterPage> createState() => _NewsletterPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _NewsletterPageState extends State<NewsletterPage> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  bool _isSubmitting = false;
+  String? _submitMessage;
+  int _subscriberCount = 0;
+  Subscriber? _latestSubscriber;
+  Timer? _timer;
 
-  void _incrementCounter() {
+  @override
+  void initState() {
+    super.initState();
+    _fetchStats();
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) => _fetchStats());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _nameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchStats() async {
+    try {
+      final countRes = await http.get(Uri.parse('$apiBaseUrl/count'));
+      final recentRes = await http.get(Uri.parse('$apiBaseUrl/recent'));
+      if (countRes.statusCode == 200) {
+        setState(() {
+          _subscriberCount = json.decode(countRes.body)['count'] ?? 0;
+        });
+      }
+      if (recentRes.statusCode == 200) {
+        final recent = json.decode(recentRes.body)['recent_subscribers'];
+        if (recent != null && recent.isNotEmpty) {
+          setState(() {
+            _latestSubscriber = Subscriber(
+              name: recent[0]['name'],
+              email: recent[0]['email'],
+            );
+          });
+        }
+      }
+    } catch (_) {
+      // Handle error silently or show a message
+    }
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _isSubmitting = true;
+      _submitMessage = null;
     });
+    final res = await http.post(
+      Uri.parse('$apiBaseUrl/subscribe'),
+      headers: {'Content-Type': 'application/json'},
+      body: json.encode({
+        'name': _nameController.text,
+        'email': _emailController.text,
+      }),
+    );
+    setState(() {
+      _isSubmitting = false;
+      if (res.statusCode == 201) {
+        _submitMessage = 'Sikeres feliratkozás!';
+        _nameController.clear();
+        _emailController.clear();
+        _fetchStats();
+      } else {
+        final err = json.decode(res.body);
+        _submitMessage = err['errors']['email'] ?? 'Hiba történt!';
+      }
+    });
+  }
+
+  String? _validateName(String? value) {
+    if (value == null || value.trim().length < 5 || value.trim().length > 40) {
+      return 'Név 5-40 karakter legyen';
+    }
+    return null;
+  }
+
+  String? _validateEmail(String? value) {
+    if (value == null ||
+        !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value.trim())) {
+      return 'Valós email címet adj meg';
+    }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('Hírlevél feliratkozás'),
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      body: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+          children: [
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: 'Név'),
+                    validator: _validateName,
+                  ),
+                  TextFormField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(labelText: 'Email'),
+                    validator: _validateEmail,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _isSubmitting ? null : _submit,
+                    child: _isSubmitting
+                        ? const CircularProgressIndicator()
+                        : const Text('Feliratkozás'),
+                  ),
+                  if (_submitMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(
+                        _submitMessage!,
+                        style: TextStyle(
+                          color: _submitMessage == 'Sikeres feliratkozás!'
+                              ? Colors.green
+                              : Colors.red,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Text('Feliratkozók száma: $_subscriberCount',
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    if (_latestSubscriber != null)
+                      Column(
+                        children: [
+                          Text('Utolsó feliratkozó:'),
+                          Text(_latestSubscriber!.name),
+                          Text(_latestSubscriber!.email),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
