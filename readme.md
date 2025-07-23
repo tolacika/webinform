@@ -99,6 +99,7 @@ The backend is located in the `php/` directory.
 docker-compose exec php composer install
 ```
 
+See [php/readme.md](php/readme.md) for more details on the API endpoints and usage.
 
 ### React Frontend
 
@@ -108,3 +109,12 @@ The frontend is located in the `react/` directory.
 ```bash
 docker-compose exec react npm install
 ```
+
+See [react/readme.md](react/readme.md) for more details on how to run the React app and its features.
+
+### Flutter Mobile App
+
+The Flutter app is located in the `flutter_app/` directory.
+
+See [flutter_app/README.md](flutter_app/README.md) for instructions on how to run the Flutter app.
+
